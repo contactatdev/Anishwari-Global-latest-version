@@ -1,4 +1,11 @@
-packages:
-  - src/**/*
-onlyBuiltDependencies:
-  - esbuild
+{
+  "name": "your-project",
+  "version": "1.0.0",
+  "description": "Your description",
+  "dependencies": {
+    "package-name": "^1.0.0"
+  },
+  "packages": {
+    "package": "1.0.0"
+  }
+}
