@@ -1,0 +1,63 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { type Product, ProductCategory } from "../backend";
+import { useActor } from "./useActor";
+
+export { ProductCategory };
+export type { Product };
+
+export function useProducts() {
+  const { actor, isFetching } = useActor();
+  return useQuery<Product[]>({
+    queryKey: ["products"],
+    queryFn: async () => {
+      if (!actor) return [];
+      return actor.getProducts();
+    },
+    enabled: !!actor && !isFetching,
+  });
+}
+
+export function useSubmitInquiry() {
+  return useMutation({
+    mutationFn: async ({
+      actor,
+      name,
+      email,
+      company,
+      productInterest,
+      message,
+    }: {
+      actor: import("../backend").backendInterface;
+      name: string;
+      email: string;
+      company: string;
+      productInterest: ProductCategory;
+      message: string;
+    }) => {
+      return actor.submitInquiry(
+        name,
+        email,
+        company,
+        productInterest,
+        message,
+      );
+    },
+  });
+}
+
+export function useInitBackend() {
+  const { actor, isFetching } = useActor();
+  const queryClient = useQueryClient();
+  return useQuery({
+    queryKey: ["init"],
+    queryFn: async () => {
+      if (!actor) return null;
+      await actor.init();
+      await queryClient.invalidateQueries({ queryKey: ["products"] });
+      return true;
+    },
+    enabled: !!actor && !isFetching,
+    staleTime: Number.POSITIVE_INFINITY,
+    retry: false,
+  });
+}

@@ -1,0 +1,173 @@
+import Array "mo:core/Array";
+import Map "mo:core/Map";
+import Iter "mo:core/Iter";
+import Order "mo:core/Order";
+import Runtime "mo:core/Runtime";
+
+actor {
+  module ProductCategory {
+    public func compare(cat1 : ProductCategory, cat2 : ProductCategory) : Order.Order {
+      switch (cat1, cat2) {
+        case (#spices, #spices) { #equal };
+        case (#spices, _) { #less };
+        case (_, #spices) { #greater };
+        case (#riceAndGrains, #riceAndGrains) { #equal };
+        case (#riceAndGrains, _) { #less };
+        case (_, #riceAndGrains) { #greater };
+        case (#pulsesAndLegumes, #pulsesAndLegumes) { #equal };
+        case (#pulsesAndLegumes, _) { #less };
+        case (_, #pulsesAndLegumes) { #greater };
+        case (#fruitsAndVegetables, #fruitsAndVegetables) { #equal };
+        case (#fruitsAndVegetables, _) { #less };
+        case (_, #fruitsAndVegetables) { #greater };
+        case (#oilseeds, #oilseeds) { #equal };
+      };
+    };
+  };
+
+  public type ProductCategory = {
+    #spices;
+    #riceAndGrains;
+    #pulsesAndLegumes;
+    #fruitsAndVegetables;
+    #oilseeds;
+  };
+
+  public type Product = {
+    id : Nat;
+    name : Text;
+    category : ProductCategory;
+    description : Text;
+    origin : Text;
+    unit : Text;
+  };
+
+  module Product {
+    public func compare(a : Product, b : Product) : Order.Order {
+      if (a.id < b.id) { return #less };
+      if (a.id > b.id) { return #greater };
+      #equal;
+    };
+
+    public func compareByName(a : Product, b : Product) : Order.Order {
+      a.name.compare(b.name);
+    };
+
+    public func compareByCategory(a : Product, b : Product) : Order.Order {
+      ProductCategory.compare(a.category, b.category);
+    };
+  };
+
+  public type Inquiry = {
+    name : Text;
+    email : Text;
+    company : Text;
+    productInterest : ProductCategory;
+    message : Text;
+  };
+
+  var initialized = false;
+
+  let productStore = Map.empty<Nat, Product>();
+  var nextProductId = 1;
+
+  let inquiryStore = Map.empty<Nat, Inquiry>();
+  var nextInquiryId = 1;
+
+  public shared ({ caller }) func init() : async () {
+    switch (initialized) {
+      case (true) { Runtime.trap("Already initialized!") };
+      case (false) {
+        // Spices & Herbs
+        addSampleProduct("Red Chilli Powder", #spices, "Vibrant, aromatic red chilli powder with consistent heat level and rich color, ideal for food processing and retail.", "Rajasthan, India", "KG / MT");
+        addSampleProduct("Turmeric Powder", #spices, "High curcumin content turmeric powder with vibrant golden color and earthy aroma, processed under hygienic conditions.", "Erode, Tamil Nadu", "KG / MT");
+        addSampleProduct("Black Pepper", #spices, "Premium bold black pepper with intense aroma and strong pungency, sourced from India's finest spice plantations.", "Kerala, India", "KG / MT");
+
+        // Rice & Grains
+        addSampleProduct("Basmati Rice", #riceAndGrains, "Premium long-grain Basmati rice with distinctive aroma and flavor, sourced from the Himalayan foothills of India.", "Punjab, India", "MT / Bags");
+        addSampleProduct("Sona Masoori Rice", #riceAndGrains, "Lightweight, aromatic medium-grain rice, low in starch. Ideal for daily cooking and health-conscious consumers.", "Andhra Pradesh", "MT / Bags");
+
+        // Pulses & Legumes
+        addSampleProduct("Yellow Lentils (Dal)", #pulsesAndLegumes, "High-protein yellow lentils sourced from India's finest pulse-growing regions, machine-cleaned and sortex processed.", "Madhya Pradesh", "MT / Bags");
+        addSampleProduct("Dollar Chana", #pulsesAndLegumes, "Large-sized Kabuli chickpeas (Dollar Chana) with bright white colour, high protein content, and clean sortex processing.", "Rajasthan, India", "MT / Bags");
+        addSampleProduct("Green Moong Dal", #pulsesAndLegumes, "Whole green moong beans, rich in protein and fiber, packed and exported with highest hygiene standards.", "Gujarat, India", "MT / Bags");
+
+        // Fruits & Vegetables
+        addSampleProduct("Alphonso Mango", #fruitsAndVegetables, "The king of mangoes — Alphonso from Ratnagiri, Maharashtra. GI-tagged, rich, and aromatic with superior shelf life.", "Ratnagiri, MH", "KG / Carton");
+        addSampleProduct("Fresh Red Onion", #fruitsAndVegetables, "Export-grade red onions with high pungency and long shelf life. Sourced from Nashik, India's onion export capital.", "Nashik, MH", "MT / Bags");
+        addSampleProduct("Banana (G9)", #fruitsAndVegetables, "Premium G9 Cavendish bananas grown in tropical climate with excellent sweetness, uniform size, and great shelf life.", "Maharashtra", "KG / Carton");
+        addSampleProduct("Fresh Coconut", #fruitsAndVegetables, "Whole and split fresh coconuts from Kerala's finest farms. High water content, tender flesh, exported worldwide.", "Kerala, India", "Pieces / MT");
+        addSampleProduct("Fresh Garlic", #fruitsAndVegetables, "Strong aromatic white garlic bulbs with excellent shelf life. Sourced from premium garlic-growing belts of India.", "Madhya Pradesh", "KG / MT");
+
+        // Oilseeds
+        addSampleProduct("Sesame Seeds", #oilseeds, "Natural and hulled sesame seeds with high oil content. Ideal for bakeries, tahini production, and health foods worldwide.", "Gujarat, India", "KG / MT");
+        addSampleProduct("Groundnut / Peanut", #oilseeds, "Bold and Java variety peanuts, high in protein and oil content, used for edible oil and snack industries globally.", "Gujarat, India", "MT / Bags");
+
+        initialized := true;
+      };
+    };
+  };
+
+  func addSampleProduct(name : Text, category : ProductCategory, description : Text, origin : Text, unit : Text) {
+    let product : Product = {
+      id = nextProductId;
+      name;
+      category;
+      description;
+      origin;
+      unit;
+    };
+    productStore.add(nextProductId, product);
+    nextProductId += 1;
+  };
+
+  public query ({ caller }) func getProducts() : async [Product] {
+    productStore.values().toArray().sort();
+  };
+
+  public shared ({ caller }) func addProduct(name : Text, category : ProductCategory, description : Text, origin : Text, unit : Text) : async Nat {
+    let product : Product = {
+      id = nextProductId;
+      name;
+      category;
+      description;
+      origin;
+      unit;
+    };
+    productStore.add(nextProductId, product);
+    nextProductId += 1;
+    nextProductId - 1;
+  };
+
+  public shared ({ caller }) func submitInquiry(name : Text, email : Text, company : Text, productInterest : ProductCategory, message : Text) : async () {
+    let inquiry : Inquiry = {
+      name;
+      email;
+      company;
+      productInterest;
+      message;
+    };
+    inquiryStore.add(nextInquiryId, inquiry);
+    nextInquiryId += 1;
+  };
+
+  public query ({ caller }) func getInquiries() : async [Inquiry] {
+    inquiryStore.values().toArray();
+  };
+
+  public shared ({ caller }) func updateProduct(id : Nat, name : Text, category : ProductCategory, description : Text, origin : Text, unit : Text) : async () {
+    let product : Product = {
+      id;
+      name;
+      category;
+      description;
+      origin;
+      unit;
+    };
+    productStore.add(id, product);
+  };
+
+  public shared ({ caller }) func deleteProduct(id : Nat) : async () {
+    productStore.remove(id);
+  };
+};
